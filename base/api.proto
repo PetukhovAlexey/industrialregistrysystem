@@ -1,0 +1,325 @@
+syntax = "proto3";
+
+package api;
+
+option go_package = "./api";
+
+import "google/protobuf/timestamp.proto";
+
+service DataService {
+  // Универсальные CRUD операции
+  rpc Create(CreateRequest) returns (EntityResponse);
+  rpc Get(GetRequest) returns (EntityResponse);
+  rpc Update(UpdateRequest) returns (EntityResponse);
+  rpc Delete(DeleteRequest) returns (DeleteResponse);
+  rpc List(ListRequest) returns (ListResponse);
+  rpc Search(SearchRequest) returns (ListResponse);
+  
+  // Специализированные операции
+  rpc GetOrganization(GetOrganizationRequest) returns (OrganizationResponse);
+  rpc ListOrganizations(ListOrganizationsRequest) returns (ListOrganizationsResponse);
+  rpc SearchOrganizations(SearchOrganizationsRequest) returns (ListOrganizationsResponse);
+  rpc GetUser(GetUserRequest) returns (UserResponse);
+  rpc CreateUser(CreateUserRequest) returns (UserResponse);
+  rpc UpdateUser(UpdateUserRequest) returns (UserResponse);
+  rpc CreateInvite(CreateInviteRequest) returns (InviteResponse);
+  rpc ValidateInvite(ValidateInviteRequest) returns (InviteResponse);
+  rpc UseInvite(UseInviteRequest) returns (InviteResponse);
+  rpc SubmitForm(SubmitFormRequest) returns (FormResponse);
+  rpc GetFinancialData(GetFinancialDataRequest) returns (FinancialDataResponse);
+  rpc GetStaffData(GetStaffDataRequest) returns (StaffDataResponse);
+  
+  // Пакетные операции
+  rpc BatchCreate(BatchCreateRequest) returns (BatchResponse);
+  rpc BatchUpdate(BatchUpdateRequest) returns (BatchResponse);
+}
+
+// Базовые сообщения для CRUD операций
+message Entity {
+  string table_name = 1;
+  map<string, string> fields = 2;
+  map<string, bytes> binary_fields = 3;
+}
+
+message CreateRequest {
+  string table_name = 1;
+  Entity entity = 2;
+}
+
+message GetRequest {
+  string table_name = 1;
+  int32 id = 2;
+  map<string, string> filters = 3;
+}
+
+message UpdateRequest {
+  string table_name = 1;
+  int32 id = 2;
+  Entity entity = 3;
+}
+
+message DeleteRequest {
+  string table_name = 1;
+  int32 id = 2;
+  bool soft_delete = 3;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  int32 affected_rows = 2;
+}
+
+message ListRequest {
+  string table_name = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  string order_by = 4;
+  bool order_desc = 5;
+  map<string, string> filters = 6;
+}
+
+message SearchRequest {
+  string table_name = 1;
+  string query = 2;
+  repeated string fields = 3;
+  int32 limit = 4;
+  int32 offset = 5;
+}
+
+message EntityResponse {
+  string table_name = 1;
+  Entity entity = 2;
+}
+
+message ListResponse {
+  string table_name = 1;
+  repeated Entity entities = 2;
+  int32 total_count = 3;
+  int32 page = 4;
+  int32 page_size = 5;
+}
+
+// Пакетные операции
+message BatchCreateRequest {
+  string table_name = 1;
+  repeated Entity entities = 2;
+}
+
+message BatchUpdateRequest {
+  string table_name = 1;
+  repeated Entity entities = 2;
+}
+
+message BatchResponse {
+  bool success = 1;
+  repeated int32 ids = 2;
+  int32 affected_rows = 3;
+  repeated string errors = 4;
+}
+
+// Специализированные сообщения (добавлены обратно)
+message GetOrganizationRequest {
+  oneof identifier {
+    int32 id = 1;
+    string inn = 2;
+  }
+}
+
+message ListOrganizationsRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  string filter = 3;
+}
+
+message SearchOrganizationsRequest {
+  string query = 1;
+  int32 limit = 2;
+}
+
+message OrganizationResponse {
+  Organization organization = 1;
+  repeated Address addresses = 2;
+  repeated Contact contacts = 3;
+  repeated FinancialIndicator financial_indicators = 4;
+  repeated StaffIndicator staff_indicators = 5;
+}
+
+message Organization {
+  int32 id = 1;
+  string inn = 2;
+  string name = 3;
+  string full_name = 4;
+  string spark_status = 5;
+  string internal_status = 6;
+  string final_status = 7;
+  string registration_date = 8;
+  string added_to_registry_date = 9;
+  bool has_special_status = 10;
+  bool is_systemically_important = 11;
+  string msp_status = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+}
+
+message Address {
+  int32 id = 1;
+  string address_type = 2;
+  string address = 3;
+  double latitude = 4;
+  double longitude = 5;
+}
+
+message Contact {
+  int32 id = 1;
+  string leader_name = 2;
+  string leader_email = 3;
+  string phone_number = 4;
+  string website = 5;
+  string general_email = 6;
+}
+
+message FinancialIndicator {
+  int32 id = 1;
+  int32 year = 2;
+  double revenue = 3;
+  double net_profit = 4;
+  double investments_moscow = 5;
+  double export_volume = 6;
+}
+
+message StaffIndicator {
+  int32 id = 1;
+  int32 year = 2;
+  int32 total_staff = 3;
+  int32 moscow_staff = 4;
+  double total_payroll_fund = 5;
+  double moscow_payroll_fund = 6;
+  double avg_salary_total = 7;
+  double avg_salary_moscow = 8;
+}
+
+message GetUserRequest {
+  oneof identifier {
+    int32 id = 1;
+    string email = 2;
+  }
+}
+
+message CreateUserRequest {
+  string email = 1;
+  string password = 2;
+  string first_name = 3;
+  string last_name = 4;
+  string phone = 5;
+  int32 organization_id = 6;
+  int32 role_id = 7;
+}
+
+message UpdateUserRequest {
+  int32 id = 1;
+  string first_name = 2;
+  string last_name = 3;
+  string phone = 4;
+  bool is_active = 5;
+}
+
+message UserResponse {
+  User user = 1;
+}
+
+message User {
+  int32 id = 1;
+  string email = 2;
+  string first_name = 3;
+  string last_name = 4;
+  string phone = 5;
+  int32 organization_id = 6;
+  int32 role_id = 7;
+  bool is_active = 8;
+  bool is_verified = 9;
+  google.protobuf.Timestamp last_login = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+message CreateInviteRequest {
+  string email = 1;
+  int32 organization_id = 2;
+  int32 role_id = 3;
+  int32 created_by = 4;
+  int32 expires_days = 5;
+}
+
+message ValidateInviteRequest {
+  string code = 1;
+}
+
+message UseInviteRequest {
+  string code = 1;
+  string email = 2;
+  string password = 3;
+  string first_name = 4;
+  string last_name = 5;
+  string phone = 6;
+}
+
+message InviteResponse {
+  Invite invite = 1;
+}
+
+message Invite {
+  int32 id = 1;
+  string code = 2;
+  string email = 3;
+  int32 organization_id = 4;
+  int32 role_id = 5;
+  bool is_used = 6;
+  google.protobuf.Timestamp expires_at = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+message SubmitFormRequest {
+  int32 form_id = 1;
+  int32 user_id = 2;
+  bytes form_data = 3;
+  string file_extension = 4;
+}
+
+message GetFormRequest {
+  int32 form_id = 1;
+  int32 user_id = 2;
+}
+
+message FormResponse {
+  int32 id = 1;
+  int32 form_id = 2;
+  int32 user_id = 3;
+  string status = 4;
+  bytes form_data = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message GetFinancialDataRequest {
+  int32 organization_id = 1;
+  int32 year = 2;
+}
+
+message FinancialDataResponse {
+  repeated FinancialIndicator indicators = 1;
+}
+
+message GetStaffDataRequest {
+  int32 organization_id = 1;
+  int32 year = 2;
+}
+
+message StaffDataResponse {
+  repeated StaffIndicator indicators = 1;
+}
+
+message ListOrganizationsResponse {
+  repeated Organization organizations = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}

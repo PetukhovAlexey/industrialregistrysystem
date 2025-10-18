@@ -1,0 +1,673 @@
+package main
+
+import (
+	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"fmt"
+	"log"
+	"net"
+	"os"
+	"sync"
+	"time"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/peer"
+	"industrialregistrysystem/base/api"
+)
+
+// DatabaseConnection представляет аутентифицированное подключение к базе данных
+type DatabaseConnection struct {
+	ServiceID    string
+	CommonName   string
+	ConnectedAt  time.Time
+	PeerInfo     *peer.Peer
+	CommandChan  chan *api.CommandRequest  // Канал для отправки команд этой БД
+	ResponseChan chan *api.CommandResponse // Канал для получения ответов от этой БД
+}
+
+// DatabaseRegistry реестр аутентифицированных подключений к БД
+type DatabaseRegistry struct {
+	mu          sync.RWMutex
+	connections map[string]*DatabaseConnection
+}
+
+func NewDatabaseRegistry() *DatabaseRegistry {
+	return &DatabaseRegistry{
+		connections: make(map[string]*DatabaseConnection),
+	}
+}
+
+// RegisterDatabase регистрирует новое аутентифицированное подключение БД
+func (registry *DatabaseRegistry) RegisterDatabase(ctx context.Context, serviceID string) (*DatabaseConnection, error) {
+	peerInfo, ok := peer.FromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("no peer information in context")
+	}
+
+	// Проверяем TLS аутентификацию
+	tlsAuth, ok := peerInfo.AuthInfo.(credentials.TLSInfo)
+	if !ok {
+		return nil, fmt.Errorf("connection is not using TLS")
+	}
+
+	if len(tlsAuth.State.PeerCertificates) == 0 {
+		return nil, fmt.Errorf("no client certificate provided")
+	}
+
+	clientCertificate := tlsAuth.State.PeerCertificates[0]
+
+	// Проверяем, что сертификат выдан для роли database
+	if !registry.validateDatabaseCertificate(clientCertificate) {
+		return nil, fmt.Errorf("invalid database certificate: CN=%s, OU=%v",
+			clientCertificate.Subject.CommonName, clientCertificate.Subject.OrganizationalUnit)
+	}
+
+	connection := &DatabaseConnection{
+		ServiceID:    serviceID,
+		CommonName:   clientCertificate.Subject.CommonName,
+		ConnectedAt:  time.Now(),
+		PeerInfo:     peerInfo,
+		CommandChan:  make(chan *api.CommandRequest, 100),
+		ResponseChan: make(chan *api.CommandResponse, 100),
+	}
+
+	registry.mu.Lock()
+	registry.connections[serviceID] = connection
+	registry.mu.Unlock()
+
+	log.Printf("✅ Database registered: %s (CN: %s, Addr: %s)",
+		serviceID, connection.CommonName, peerInfo.Addr.String())
+
+	return connection, nil
+}
+
+// RegisterDatabaseFromStream регистрирует базу данных из CommandStream
+func (registry *DatabaseRegistry) RegisterDatabaseFromStream(stream context.Context, serviceID string) (*DatabaseConnection, error) {
+	peerInfo, ok := peer.FromContext(stream)
+	if !ok {
+		return nil, fmt.Errorf("no peer information in stream context")
+	}
+
+	// Проверяем TLS аутентификацию
+	tlsAuth, ok := peerInfo.AuthInfo.(credentials.TLSInfo)
+	if !ok {
+		return nil, fmt.Errorf("connection is not using TLS")
+	}
+
+	if len(tlsAuth.State.PeerCertificates) == 0 {
+		return nil, fmt.Errorf("no client certificate provided")
+	}
+
+	clientCertificate := tlsAuth.State.PeerCertificates[0]
+
+	// Проверяем, что сертификат выдан для роли database
+	if !registry.validateDatabaseCertificate(clientCertificate) {
+		return nil, fmt.Errorf("invalid database certificate: CN=%s, OU=%v",
+			clientCertificate.Subject.CommonName, clientCertificate.Subject.OrganizationalUnit)
+	}
+
+	connection := &DatabaseConnection{
+		ServiceID:    serviceID,
+		CommonName:   clientCertificate.Subject.CommonName,
+		ConnectedAt:  time.Now(),
+		PeerInfo:     peerInfo,
+		CommandChan:  make(chan *api.CommandRequest, 100),
+		ResponseChan: make(chan *api.CommandResponse, 100),
+	}
+
+	registry.mu.Lock()
+	registry.connections[serviceID] = connection
+	registry.mu.Unlock()
+
+	log.Printf("✅ Database registered from stream: %s (CN: %s, Addr: %s)",
+		serviceID, connection.CommonName, peerInfo.Addr.String())
+
+	return connection, nil
+}
+
+// validateDatabaseCertificate проверяет валидность сертификата БД
+func (registry *DatabaseRegistry) validateDatabaseCertificate(certificate *x509.Certificate) bool {
+	// Проверяем Common Name
+	if certificate.Subject.CommonName != "database" {
+		return false
+	}
+
+	// Проверяем Organizational Unit
+	hasDatabaseOU := false
+	for _, organizationalUnit := range certificate.Subject.OrganizationalUnit {
+		if organizationalUnit == "Database" {
+			hasDatabaseOU = true
+			break
+		}
+	}
+
+	if !hasDatabaseOU {
+		return false
+	}
+
+	// Проверяем Organization
+	hasCorrectOrganization := false
+	for _, organization := range certificate.Subject.Organization {
+		if organization == "IndustrialRegistrySystem" {
+			hasCorrectOrganization = true
+			break
+		}
+	}
+
+	return hasCorrectOrganization
+}
+
+// GetDatabase возвращает подключение к БД по ID
+func (registry *DatabaseRegistry) GetDatabase(serviceID string) (*DatabaseConnection, bool) {
+	registry.mu.RLock()
+	defer registry.mu.RUnlock()
+
+	connection, exists := registry.connections[serviceID]
+	return connection, exists
+}
+
+// ListDatabases возвращает список всех зарегистрированных БД
+func (registry *DatabaseRegistry) ListDatabases() []*DatabaseConnection {
+	registry.mu.RLock()
+	defer registry.mu.RUnlock()
+
+	connections := make([]*DatabaseConnection, 0, len(registry.connections))
+	for _, connection := range registry.connections {
+		connections = append(connections, connection)
+	}
+
+	return connections
+}
+
+// RemoveDatabase удаляет подключение БД из реестра
+func (registry *DatabaseRegistry) RemoveDatabase(serviceID string) {
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+
+	if connection, exists := registry.connections[serviceID]; exists {
+		log.Printf("🗑️ Database unregistered: %s (CN: %s)", serviceID, connection.CommonName)
+		close(connection.CommandChan)
+		close(connection.ResponseChan)
+		delete(registry.connections, serviceID)
+	}
+}
+
+// SendCommandToDatabase отправляет команду конкретной базе данных
+func (registry *DatabaseRegistry) SendCommandToDatabase(serviceID string, command *api.CommandRequest) error {
+	registry.mu.RLock()
+	connection, exists := registry.connections[serviceID]
+	registry.mu.RUnlock()
+
+	if !exists {
+		return fmt.Errorf("database with ID %s not found", serviceID)
+	}
+
+	select {
+	case connection.CommandChan <- command:
+		log.Printf("📤 Command sent to database %s: %s", serviceID, command.RequestId)
+		return nil
+	case <-time.After(5 * time.Second):
+		return fmt.Errorf("timeout sending command to database %s", serviceID)
+	}
+}
+
+// FIFO3Cache реализует алгоритм FIFO с тремя уровнями приоритета
+type FIFO3Cache struct {
+	mu          sync.RWMutex
+	level1      map[string]*CacheItem // Горячие данные (часто запрашиваемые)
+	level2      map[string]*CacheItem // Теплые данные
+	level3      map[string]*CacheItem // Холодные данные
+	maxSize     int
+	currentSize int
+}
+
+type CacheItem struct {
+	key         string
+	value       interface{}
+	createdAt   time.Time
+	lastAccess  time.Time
+	accessCount int
+}
+
+func NewFIFO3Cache(maxSize int) *FIFO3Cache {
+	return &FIFO3Cache{
+		level1:  make(map[string]*CacheItem),
+		level2:  make(map[string]*CacheItem),
+		level3:  make(map[string]*CacheItem),
+		maxSize: maxSize,
+	}
+}
+
+func (cache *FIFO3Cache) Get(key string) (interface{}, bool) {
+	cache.mu.RLock()
+	defer cache.mu.RUnlock()
+
+	if item, found := cache.level1[key]; found {
+		item.lastAccess = time.Now()
+		item.accessCount++
+		return item.value, true
+	}
+
+	if item, found := cache.level2[key]; found {
+		item.lastAccess = time.Now()
+		item.accessCount++
+		if item.accessCount > 5 {
+			cache.promoteToLevel1(key, item)
+		}
+		return item.value, true
+	}
+
+	if item, found := cache.level3[key]; found {
+		item.lastAccess = time.Now()
+		item.accessCount++
+		if item.accessCount > 3 {
+			cache.promoteToLevel2(key, item)
+		}
+		return item.value, true
+	}
+
+	return nil, false
+}
+
+func (cache *FIFO3Cache) Set(key string, value interface{}) {
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
+
+	if _, exists := cache.level1[key]; exists {
+		cache.level1[key].value = value
+		cache.level1[key].lastAccess = time.Now()
+		return
+	}
+	if _, exists := cache.level2[key]; exists {
+		cache.level2[key].value = value
+		cache.level2[key].lastAccess = time.Now()
+		return
+	}
+	if _, exists := cache.level3[key]; exists {
+		cache.level3[key].value = value
+		cache.level3[key].lastAccess = time.Now()
+		return
+	}
+
+	item := &CacheItem{
+		key:         key,
+		value:       value,
+		createdAt:   time.Now(),
+		lastAccess:  time.Now(),
+		accessCount: 1,
+	}
+
+	if cache.currentSize >= cache.maxSize {
+		cache.evict()
+	}
+
+	cache.level3[key] = item
+	cache.currentSize++
+}
+
+func (cache *FIFO3Cache) promoteToLevel1(key string, item *CacheItem) {
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
+
+	delete(cache.level2, key)
+	cache.level1[key] = item
+}
+
+func (cache *FIFO3Cache) promoteToLevel2(key string, item *CacheItem) {
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
+
+	delete(cache.level3, key)
+	cache.level2[key] = item
+}
+
+func (cache *FIFO3Cache) evict() {
+	if len(cache.level3) > 0 {
+		for key := range cache.level3 {
+			delete(cache.level3, key)
+			cache.currentSize--
+			return
+		}
+	}
+
+	if len(cache.level2) > 0 {
+		for key := range cache.level2 {
+			delete(cache.level2, key)
+			cache.currentSize--
+			return
+		}
+	}
+
+	if len(cache.level1) > 0 {
+		for key := range cache.level1 {
+			delete(cache.level1, key)
+			cache.currentSize--
+			return
+		}
+	}
+}
+
+func (cache *FIFO3Cache) Remove(key string) {
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
+
+	if _, exists := cache.level1[key]; exists {
+		delete(cache.level1, key)
+		cache.currentSize--
+		return
+	}
+	if _, exists := cache.level2[key]; exists {
+		delete(cache.level2, key)
+		cache.currentSize--
+		return
+	}
+	if _, exists := cache.level3[key]; exists {
+		delete(cache.level3, key)
+		cache.currentSize--
+		return
+	}
+}
+
+func (cache *FIFO3Cache) Clear() {
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
+
+	cache.level1 = make(map[string]*CacheItem)
+	cache.level2 = make(map[string]*CacheItem)
+	cache.level3 = make(map[string]*CacheItem)
+	cache.currentSize = 0
+}
+
+func (cache *FIFO3Cache) GetStats() (int, int, int, int) {
+	cache.mu.RLock()
+	defer cache.mu.RUnlock()
+
+	return len(cache.level1), len(cache.level2), len(cache.level3), cache.currentSize
+}
+
+// UserDataService реализует оба сервиса: DataService и DatabaseService
+type UserDataService struct {
+	api.UnimplementedDataServiceServer
+	api.UnimplementedDatabaseServiceServer
+	cache            *FIFO3Cache
+	databaseRegistry *DatabaseRegistry
+	pendingRequests  sync.Map // map[string]chan *api.CommandResponse - ожидающие ответы
+}
+
+func NewUserDataService() *UserDataService {
+	return &UserDataService{
+		cache:            NewFIFO3Cache(1000),
+		databaseRegistry: NewDatabaseRegistry(),
+	}
+}
+
+// RegisterDatabase регистрирует подключение базы данных с аутентификацией
+func (service *UserDataService) RegisterDatabase(ctx context.Context, request *api.DatabaseRegistrationRequest) (*api.DatabaseRegistrationResponse, error) {
+	connection, err := service.databaseRegistry.RegisterDatabase(ctx, request.ServiceId)
+	if err != nil {
+		log.Printf("❌ Database registration failed: %v", err)
+		return &api.DatabaseRegistrationResponse{
+			Success:      false,
+			ErrorMessage: err.Error(),
+		}, nil
+	}
+
+	log.Printf("✅ Database %s ready to receive commands", request.ServiceId)
+
+	return &api.DatabaseRegistrationResponse{
+		Success:    true,
+		ServiceId:  connection.ServiceID,
+		CommonName: connection.CommonName,
+		Timestamp:  connection.ConnectedAt.Format(time.RFC3339),
+	}, nil
+}
+
+// CommandStream обрабатывает поток команд - СЕРВЕР ОТПРАВЛЯЕТ CommandRequest, КЛИЕНТЫ ОТПРАВЛЯЮТ CommandResponse
+func (service *UserDataService) CommandStream(stream api.DatabaseService_CommandStreamServer) error {
+	// Получаем информацию о подключении
+	peerInfo, ok := peer.FromContext(stream.Context())
+	if !ok {
+		return fmt.Errorf("no peer information in context")
+	}
+
+	log.Printf("🔗 New command stream connection from: %s", peerInfo.Addr.String())
+
+	// Получаем ServiceID из TLS сертификата
+	serviceID := service.getServiceIDFromContext(stream.Context())
+	if serviceID == "" {
+		return fmt.Errorf("cannot determine service ID from certificate")
+	}
+
+	// Проверяем, зарегистрирована ли уже база данных
+	_, exists := service.databaseRegistry.GetDatabase(serviceID)
+	if !exists {
+		// Если не зарегистрирована, регистрируем её автоматически из потока
+		log.Printf("📝 Auto-registering database from stream: %s", serviceID)
+		_, err := service.databaseRegistry.RegisterDatabaseFromStream(stream.Context(), serviceID)
+		if err != nil {
+			log.Printf("❌ Failed to auto-register database %s: %v", serviceID, err)
+			return err
+		}
+	}
+
+	// Получаем соединение с БД
+	connection, exists := service.databaseRegistry.GetDatabase(serviceID)
+	if !exists {
+		return fmt.Errorf("database %s not found after registration", serviceID)
+	}
+
+	log.Printf("🔧 Database %s connected to command stream", serviceID)
+
+	// Горутина для отправки команд клиенту
+	go func() {
+		for command := range connection.CommandChan {
+			log.Printf("📤 Sending command to database %s: %s", serviceID, command.RequestId)
+			if err := stream.Send(command); err != nil {
+				log.Printf("❌ Failed to send command to database %s: %v", serviceID, err)
+				return
+			}
+		}
+	}()
+
+	// Основной цикл обработки ответов от клиента
+	for {
+		// Получаем CommandResponse от клиента (базы данных)
+		commandResponse, receiveError := stream.Recv()
+		if receiveError != nil {
+			log.Printf("❌ Error receiving from database %s: %v", serviceID, receiveError)
+			
+			// Удаляем базу данных из реестра при отключении
+			service.databaseRegistry.RemoveDatabase(serviceID)
+			return receiveError
+		}
+
+		log.Printf("📨 Received response from database %s for request: %s", serviceID, commandResponse.RequestId)
+
+		// Обрабатываем ответ от базы данных
+		service.processDatabaseResponse(commandResponse)
+	}
+}
+
+// getServiceIDFromContext извлекает ServiceID из TLS контекста
+func (service *UserDataService) getServiceIDFromContext(ctx context.Context) string {
+	peerInfo, ok := peer.FromContext(ctx)
+	if !ok {
+		return ""
+	}
+
+	tlsAuth, ok := peerInfo.AuthInfo.(credentials.TLSInfo)
+	if !ok || len(tlsAuth.State.PeerCertificates) == 0 {
+		return ""
+	}
+
+	// Используем CommonName как ServiceID
+	// В сертификате database CN должно быть "database"
+	return tlsAuth.State.PeerCertificates[0].Subject.CommonName
+}
+
+// processDatabaseResponse обрабатывает ответ от базы данных
+func (service *UserDataService) processDatabaseResponse(response *api.CommandResponse) {
+	// Здесь можно добавить логику обработки ответов от базы данных
+	// Например, кэширование результатов, уведомление ожидающих горутин и т.д.
+	log.Printf("🔧 Processing response for request: %s", response.RequestId)
+	
+	// Простая обработка: логируем тип ответа
+	switch response.Response.(type) {
+	case *api.CommandResponse_Organization:
+		log.Printf("📊 Received organization data for request: %s", response.RequestId)
+	case *api.CommandResponse_User:
+		log.Printf("👤 Received user data for request: %s", response.RequestId)
+	case *api.CommandResponse_Error:
+		errorResp := response.GetError()
+		log.Printf("❌ Received error for request %s: %s", response.RequestId, errorResp.Message)
+	case *api.CommandResponse_Simple:
+		simpleResp := response.GetSimple()
+		log.Printf("ℹ️ Received simple response for request %s: %s", response.RequestId, simpleResp.Message)
+	default:
+		log.Printf("📨 Received response type for request %s", response.RequestId)
+	}
+}
+
+// ExecuteCommand отправляет команду зарегистрированной базе данных
+func (service *UserDataService) ExecuteCommand(ctx context.Context, request *api.CommandRequest) (*api.CommandResponse, error) {
+	// Выбираем базу данных для выполнения команды
+	databases := service.databaseRegistry.ListDatabases()
+	if len(databases) == 0 {
+		return nil, fmt.Errorf("no databases available")
+	}
+
+	// Простая стратегия: выбираем первую доступную БД
+	targetDatabase := databases[0].ServiceID
+
+	log.Printf("🔧 Executing command via database %s: %s", targetDatabase, request.RequestId)
+
+	// Отправляем команду выбранной БД
+	err := service.databaseRegistry.SendCommandToDatabase(targetDatabase, request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send command to database: %v", err)
+	}
+
+	// В реальной реализации здесь должно быть ожидание ответа от БД
+	// Для простоты возвращаем заглушку
+	return &api.CommandResponse{
+		RequestId: request.RequestId,
+		Response: &api.CommandResponse_Simple{
+			Simple: &api.SimpleResponse{
+				Success: true,
+				Message: "Command sent to database for processing",
+			},
+		},
+	}, nil
+}
+
+// Методы DataService - теперь они используют ExecuteCommand для отправки команд БД
+func (service *UserDataService) GetOrganization(ctx context.Context, request *api.GetOrganizationRequest) (*api.OrganizationResponse, error) {
+	command := &api.CommandRequest{
+		RequestId: fmt.Sprintf("org_%d", time.Now().UnixNano()),
+		Command: &api.CommandRequest_GetOrganization{
+			GetOrganization: request,
+		},
+	}
+
+	response, err := service.ExecuteCommand(ctx, command)
+	if err != nil {
+		return nil, err
+	}
+
+	// Преобразуем ответ
+	if orgResponse := response.GetOrganization(); orgResponse != nil {
+		return orgResponse, nil
+	}
+
+	return nil, fmt.Errorf("invalid response type")
+}
+
+func (service *UserDataService) GetUser(ctx context.Context, request *api.GetUserRequest) (*api.UserResponse, error) {
+	command := &api.CommandRequest{
+		RequestId: fmt.Sprintf("user_%d", time.Now().UnixNano()),
+		Command: &api.CommandRequest_GetUser{
+			GetUser: request,
+		},
+	}
+
+	response, err := service.ExecuteCommand(ctx, command)
+	if err != nil {
+		return nil, err
+	}
+
+	if userResponse := response.GetUser(); userResponse != nil {
+		return userResponse, nil
+	}
+
+	return nil, fmt.Errorf("invalid response type")
+}
+
+// Добавьте остальные методы DataService по аналогии...
+
+// loadTLSCredentials загружает TLS сертификаты для сервера
+func loadTLSCredentials() (credentials.TransportCredentials, error) {
+	// Загружаем сертификат сервера
+	serverCertificate, serverError := tls.LoadX509KeyPair("certs/mainservice/mainservice-fullchain.crt", "certs/mainservice/mainservice.key")
+	if serverError != nil {
+		return nil, fmt.Errorf("failed to load server certificates: %v", serverError)
+	}
+
+	// Загружаем CA сертификат
+	caCertificate, caError := os.ReadFile("certs/ca/ca.crt")
+	if caError != nil {
+		return nil, fmt.Errorf("failed to read CA certificate: %v", caError)
+	}
+
+	certificatePool := x509.NewCertPool()
+	if !certificatePool.AppendCertsFromPEM(caCertificate) {
+		return nil, fmt.Errorf("failed to add CA certificate to pool")
+	}
+
+	// Настраиваем TLS конфигурацию с правильной верификацией
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{serverCertificate},
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		ClientCAs:    certificatePool,
+		MinVersion:   tls.VersionTLS12,
+	}
+
+	return credentials.NewTLS(tlsConfig), nil
+}
+
+func main() {
+	// Загружаем TLS credentials
+	tlsCredentials, credentialsError := loadTLSCredentials()
+	if credentialsError != nil {
+		log.Fatalf("❌ Failed to load TLS credentials: %v", credentialsError)
+	}
+
+	// Создаем gRPC сервер с TLS
+	grpcServer := grpc.NewServer(
+		grpc.Creds(tlsCredentials),
+	)
+
+	userDataService := NewUserDataService()
+	
+	// Регистрируем оба сервиса
+	api.RegisterDataServiceServer(grpcServer, userDataService)
+	api.RegisterDatabaseServiceServer(grpcServer, userDataService)
+
+	// Запускаем сервер
+	listener, listenerError := net.Listen("tcp", ":5051")
+	if listenerError != nil {
+		log.Fatalf("❌ Failed to listen: %v", listenerError)
+	}
+
+	log.Println("🔐 User Data Service (gRPC Server with mTLS) running on :5051")
+	log.Println("   TLS: Enabled (mutual authentication required)")
+	log.Println("   Database authentication: Certificate-based")
+	log.Println("   Available commands:")
+	log.Println("   - GetOrganization, GetUser, CreateUser, ListOrganizations, etc.")
+	log.Println("   Registered services: DataService, DatabaseService")
+
+	if serveError := grpcServer.Serve(listener); serveError != nil {
+		log.Fatalf("❌ Failed to serve: %v", serveError)
+	}
+}

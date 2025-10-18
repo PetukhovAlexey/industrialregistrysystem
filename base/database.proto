@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+package api;
+option go_package = "./api";
+import "api.proto";
+
+// Database Registration
+message DatabaseRegistrationRequest {
+    string service_id = 1;
+}
+
+message DatabaseRegistrationResponse {
+    bool success = 1;
+    string service_id = 2;
+    string common_name = 3;
+    string timestamp = 4;
+    string error_message = 5;
+}
+
+// Command System
+message CommandRequest {
+    string request_id = 1;
+    oneof command {
+        // Универсальные CRUD команды
+        CreateRequest create = 2;
+        GetRequest get = 3;
+        UpdateRequest update = 4;
+        DeleteRequest delete = 5;
+        ListRequest list = 6;
+        SearchRequest search = 7;
+        BatchCreateRequest batch_create = 8;
+        BatchUpdateRequest batch_update = 9;
+        
+        // Специализированные команды
+        GetOrganizationRequest get_organization = 10;
+        ListOrganizationsRequest list_organizations = 11;
+        SearchOrganizationsRequest search_organizations = 12;
+        GetUserRequest get_user = 13;
+        CreateUserRequest create_user = 14;
+        UpdateUserRequest update_user = 15;
+        CreateInviteRequest create_invite = 16;
+        ValidateInviteRequest validate_invite = 17;
+        UseInviteRequest use_invite = 18;
+        SubmitFormRequest submit_form = 19;
+        GetFinancialDataRequest get_financial_data = 20;
+        GetStaffDataRequest get_staff_data = 21;
+        
+        // Системные команды
+        string system_command = 22;
+    }
+}
+
+message CommandResponse {
+    string request_id = 1;
+    oneof response {
+        // Универсальные CRUD ответы
+        EntityResponse entity = 2;
+        ListResponse list = 3;
+        DeleteResponse delete = 4;
+        BatchResponse batch = 5;
+        
+        // Специализированные ответы
+        OrganizationResponse organization = 6;
+        ListOrganizationsResponse organizations = 7;
+        UserResponse user = 8;
+        InviteResponse invite = 9;
+        FormResponse form = 10;
+        FinancialDataResponse financial_data = 11;
+        StaffDataResponse staff_data = 12;
+        
+        // Системные ответы
+        ErrorResponse error = 13;
+        ReadyMessage ready = 14;
+        SystemResponse system = 15;
+    }
+}
+
+message SystemResponse {
+    bool success = 1;
+    string message = 2;
+    map<string, string> data = 3;
+}
+
+message ReadyMessage {
+    string service_name = 1;
+}
+
+message ErrorResponse {
+    string message = 1;
+    string code = 2;
+    string details = 3;
+}
+
+// Database Service
+service DatabaseService {
+    rpc CommandStream(stream CommandResponse) returns (stream CommandRequest);
+    rpc RegisterDatabase(DatabaseRegistrationRequest) returns (DatabaseRegistrationResponse);
+}
