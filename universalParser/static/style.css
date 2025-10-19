@@ -1,0 +1,308 @@
+        :root {
+            --primary-color: #2c5aa0;
+            --secondary-color: #6c757d;
+            --success-color: #198754;
+            --info-color: #0dcaf0;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+
+        .navbar-brand {
+            font-size: 1.5rem;
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+        }
+
+        .card-header {
+            border-bottom: 1px solid #e9ecef;
+            border-radius: 12px 12px 0 0 !important;
+        }
+
+        .nav-link {
+            color: var(--secondary-color);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.25rem;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            background-color: #e9ecef;
+            color: var(--primary-color);
+        }
+
+        .nav-link.active {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 600;
+        }
+
+        .company-chart-card {
+            transition: all 0.3s ease;
+            border: 1px solid #e9ecef;
+            height: 100%;
+        }
+
+        .company-chart-card:hover {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 2rem;
+        }
+
+        .company-chart-container {
+            position: relative;
+            height: 200px;
+            margin-bottom: 1rem;
+        }
+
+        .spider-chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 2rem;
+        }
+
+        .financial-data-table {
+            font-size: 0.875rem;
+        }
+
+        .financial-data-table th {
+            background-color: #f8f9fa;
+        }
+
+        .company-mini-stats {
+            font-size: 0.8rem;
+        }
+
+        .pagination {
+            margin-bottom: 0;
+        }
+
+        .companies-per-page {
+            width: 80px;
+        }
+
+        /* Стили для аналитики */
+        .file-upload-area {
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .file-upload-area:hover {
+            border-color: var(--primary-color);
+            background-color: #f8f9fa;
+        }
+
+        .file-upload-area.active {
+            border-color: var(--primary-color);
+            background-color: rgba(44, 90, 160, 0.05);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .stats-card {
+            text-align: center;
+            padding: 1.5rem;
+        }
+
+        .stats-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .stats-label {
+            font-size: 0.875rem;
+            color: var(--secondary-color);
+            text-transform: uppercase;
+        }
+
+        /* Новые стили для фильтров */
+        .filter-combobox {
+            min-width: 300px;
+        }
+
+        .filter-option {
+            padding: 12px;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .filter-option:hover {
+            background-color: #f8f9fa;
+        }
+
+        .filter-option:last-child {
+            border-bottom: none;
+        }
+
+        .filter-name {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .filter-description {
+            font-size: 0.875rem;
+            color: var(--secondary-color);
+        }
+
+        .create-filter-option {
+            background-color: #f8f9fa;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .create-filter-option:hover {
+            background-color: #e9ecef;
+        }
+
+        .jira-like-name {
+            font-family: monospace;
+            background-color: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        /* Стили для индикатора загрузки */
+        .file-upload-area .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+
+        /* Стили для таблицы редактирования */
+        .editable-table {
+            width: 100%;
+        }
+        
+        .editable-table th {
+            background-color: #f8f9fa;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .editable-table td {
+            vertical-align: middle;
+        }
+        
+        .editable-cell {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .editable-cell:hover {
+            background-color: #f0f8ff;
+        }
+        
+        .editable-cell.editing {
+            background-color: #e7f3ff;
+            padding: 0;
+        }
+        
+        .editable-input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            padding: 0.5rem;
+            font-size: inherit;
+        }
+        
+        .editable-input:focus {
+            outline: 2px solid var(--primary-color);
+            background-color: white;
+        }
+        
+        .table-container {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .action-buttons {
+            white-space: nowrap;
+        }
+        
+        .modified-cell {
+            background-color: #fff3cd !important;
+        }
+        
+        .save-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container-fluid {
+                padding-left: 15px;
+                padding-right: 15px;
+            }
+            
+            .card-body {
+                padding: 1rem;
+            }
+
+            .filter-combobox {
+                min-width: 250px;
+            }
+            
+            .table-container {
+                font-size: 0.8rem;
+            }
+        }
+
+        /* Стили для формы загрузки */
+        .needs-validation .form-control:invalid {
+            border-color: #dc3545;
+        }
+
+        .needs-validation .form-control:valid {
+            border-color: #198754;
+        }
+
+        /* Стили для спиннера */
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
+        }
+
+        /* Анимация для drag & drop */
+        .upload-area {
+            transition: all 0.3s ease;
+        }
+
+        .upload-area.dragover {
+            background-color: #e3f2fd !important;
+            border-color: #2196f3 !important;
+        }

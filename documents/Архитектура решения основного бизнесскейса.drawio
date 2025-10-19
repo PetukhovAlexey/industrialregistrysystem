@@ -1,0 +1,193 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36" version="28.2.7">
+  <diagram name="Страница — 1" id="EHw4vXSNpy0fDgmk0a8Y">
+    <mxGraphModel dx="3021" dy="1195" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="GkietMd0e2N0HiqM2LkV-25" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="60" y="610" width="430" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=1;dashPattern=8 8;" edge="1" parent="1" target="GkietMd0e2N0HiqM2LkV-4">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="130" y="300" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=1;dashPattern=8 8;" edge="1" parent="1" target="GkietMd0e2N0HiqM2LkV-11">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="100" y="340" as="sourcePoint" />
+            <Array as="points">
+              <mxPoint x="100" y="550" />
+              <mxPoint x="500" y="550" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-24" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;dashPattern=8 8;" edge="1" parent="1" target="GkietMd0e2N0HiqM2LkV-25">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="100" y="600" as="targetPoint" />
+            <mxPoint x="80" y="340" as="sourcePoint" />
+            <Array as="points">
+              <mxPoint x="80" y="480" />
+              <mxPoint x="80" y="480" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-4" value="" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;" vertex="1" parent="1">
+          <mxGeometry x="490" y="260" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-6" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;База данных.&lt;/h1&gt;&lt;p&gt;cms Аналитики данных работы предприятий по моссковской области.&lt;/p&gt;&lt;p&gt;НЕ важно какая. сделали интеграцию с тем с чем проще разобраться за 2 дня хакатона. в бою нужно подойти к вопросу ответственнее.&lt;/p&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="140" width="180" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="GkietMd0e2N0HiqM2LkV-6" target="GkietMd0e2N0HiqM2LkV-29">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="100" y="260" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="90" y="105" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-8" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;Основная сущность (тени/индекаторы):&lt;br&gt;&quot;Моментальное состояние предприятия&quot;&lt;/h1&gt;&lt;p&gt;по ключевым характеристикам&lt;/p&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="430" y="90" width="510" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;dashPattern=8 8;entryX=0.4;entryY=0.956;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="GkietMd0e2N0HiqM2LkV-9" target="GkietMd0e2N0HiqM2LkV-17">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="620" y="480" />
+              <mxPoint x="620" y="480" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-9" value="" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="550" y="550" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-10" value="" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="520" y="530" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-11" value="" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="500" y="510" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.385;entryY=1.046;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="GkietMd0e2N0HiqM2LkV-12" target="GkietMd0e2N0HiqM2LkV-9">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="180" y="420" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-12" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;Файлы&lt;/h1&gt;&lt;p&gt;Все источники данных, для простоты абстракции - файлы.&lt;/p&gt;&lt;p&gt;касается и снимков состояния полученных по sdk интеграции со сторонними системами.&lt;/p&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="580" y="660" width="340" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-16" value="" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;" vertex="1" parent="1">
+          <mxGeometry x="510" y="280" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-50" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="GkietMd0e2N0HiqM2LkV-17" target="GkietMd0e2N0HiqM2LkV-49">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-17" value="" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;" vertex="1" parent="1">
+          <mxGeometry x="540" y="300" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-18" value="компания" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="120" y="630" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-21" value="поля компании" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;rotatable=0;whiteSpace=wrap;html=1;" vertex="1" parent="GkietMd0e2N0HiqM2LkV-18">
+          <mxGeometry y="30" width="140" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-22" value="пользователи" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="300" y="630" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-23" value="поля пользователей" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;rotatable=0;whiteSpace=wrap;html=1;" vertex="1" parent="GkietMd0e2N0HiqM2LkV-22">
+          <mxGeometry y="30" width="140" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-27" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="GkietMd0e2N0HiqM2LkV-26" target="GkietMd0e2N0HiqM2LkV-25">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="195" y="760" />
+              <mxPoint x="195" y="760" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-26" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;Данные&amp;nbsp;cms&amp;nbsp;&lt;/h1&gt;&lt;p&gt;скучные но важные данные ответственные за пользовательский интерфейс, роли, доступ, безопасность.&lt;br&gt;и. кстати. карточка компании - тоже &quot;файл&quot;&lt;/p&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="60" y="790" width="270" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-36" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;dashed=1;dashPattern=8 8;fillColor=#dae8fc;strokeColor=#6c8ebf;" edge="1" parent="1" source="GkietMd0e2N0HiqM2LkV-28" target="GkietMd0e2N0HiqM2LkV-33">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint y="260" />
+              <mxPoint y="170" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-40" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;dashed=1;dashPattern=8 8;fillColor=#dae8fc;strokeColor=#6c8ebf;" edge="1" parent="1" source="GkietMd0e2N0HiqM2LkV-28" target="GkietMd0e2N0HiqM2LkV-37">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-44" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;dashPattern=8 8;exitX=0.8;exitY=0.8;exitDx=0;exitDy=0;exitPerimeter=0;" edge="1" parent="1" source="GkietMd0e2N0HiqM2LkV-28" target="GkietMd0e2N0HiqM2LkV-41">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="120" y="324" />
+              <mxPoint x="120" y="370" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-28" value="" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="260" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-29" value="" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" vertex="1" parent="1">
+          <mxGeometry x="60" y="120" width="60" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-30" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;dashed=1;dashPattern=8 8;fillColor=#dae8fc;strokeColor=#6c8ebf;" edge="1" parent="1" source="GkietMd0e2N0HiqM2LkV-28" target="GkietMd0e2N0HiqM2LkV-29">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-31" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;Функциональное ядро&lt;/h1&gt;&lt;div&gt;мозг нашего решения. в бою обязан быть разделен на микросервисы. мы форсировали выдачу решения сделав его монолитом.&lt;/div&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="-260" y="485" width="280" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.07;entryY=0.4;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="GkietMd0e2N0HiqM2LkV-31" target="GkietMd0e2N0HiqM2LkV-28">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="30" y="540" />
+              <mxPoint x="30" y="292" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-33" value="" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="-160" y="130" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-35" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="GkietMd0e2N0HiqM2LkV-34" target="GkietMd0e2N0HiqM2LkV-33">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-34" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;Интерфейс пользователя&lt;/h1&gt;&lt;p&gt;набор статичных файлов, не меняющихся ни как силами сервера, работают в браузере клиента&lt;/p&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="-550" y="30" width="330" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-37" value="" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="-220" y="270" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-39" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="GkietMd0e2N0HiqM2LkV-38" target="GkietMd0e2N0HiqM2LkV-37">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-38" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;Читатель&lt;/h1&gt;&lt;p&gt;Сервис, который просто необходимо, первым разделить на несколько микросервисов.&lt;/p&gt;&lt;p&gt;читает формы. потличает друг от друга формы. заполняет таблицу теней и файлов.&lt;/p&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="-520" y="210" width="260" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-45" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;dashPattern=8 8;" edge="1" parent="1" source="GkietMd0e2N0HiqM2LkV-41" target="GkietMd0e2N0HiqM2LkV-17">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="490" y="360" />
+              <mxPoint x="490" y="360" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-41" value="" style="triangle;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="270" y="320" width="60" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-43" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;exitX=0.611;exitY=0.066;exitDx=0;exitDy=0;exitPerimeter=0;" edge="1" parent="1" source="GkietMd0e2N0HiqM2LkV-42" target="GkietMd0e2N0HiqM2LkV-41">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="300" y="429.9999999999998" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-42" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;Фильтры&lt;/h1&gt;&lt;p&gt;Аналог фильтров в jira&lt;/p&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="190" y="440" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-49" value="" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="880" y="290" width="80" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="GkietMd0e2N0HiqM2LkV-51" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;Конечное представление&lt;/h1&gt;&lt;div&gt;Тени прошедшие фильтрацию накладываются друг на друга, образуя конечное представление. графики строятся по представлениям.&lt;/div&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="800" y="440" width="340" height="120" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

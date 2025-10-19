@@ -3,26 +3,32 @@ package main
 import (
     "database/sql"
     "fmt"
-    "log"
     "os"
     "path/filepath"
+    "regexp"
     "strconv"
     "strings"
     "time"
+    "log"
 
     "github.com/xuri/excelize/v2"
     _ "github.com/lib/pq"
 )
 
-// FinancialData представляет финансовые данные организации
-type FinancialData struct {
-    INN                   string
-    OGRN                 string
-    Name                  string
-    FullName              string
-    Year                  string
-    Revenue               sql.NullFloat64
-    NetProfit            sql.NullFloat64
+var db *sql.DB
+
+type FileType int
+
+const (
+    FileTypeUnknown FileType = iota
+    FileTypeExcelMultiYear
+    FileTypeExcelSingleYear
+    FileTypePDFSummary
+    FileTypePDFDueDiligence
+    FinancialReport
+)
+
+type BalanceData struct {
     TotalAssets          sql.NullFloat64
     Equity               sql.NullFloat64
     FixedAssets          sql.NullFloat64
@@ -32,66 +38,42 @@ type FinancialData struct {
     Cash                 sql.NullFloat64
     AccountsReceivable   sql.NullFloat64
     Inventory            sql.NullFloat64
-    
-    // Дополнительные поля из PDF
-    RegistrationDate     string
-    LegalAddress         string
-    StaffCount           sql.NullInt64
-    MainOKVED            string
-    OKVEDDescription     string
 }
 
-// FileType определяет тип файла
-type FileType int
-
-const (
-    FileTypeUnknown FileType = iota
-    FileTypeExcelMultiYear   // Excel с несколькими годами
-    FileTypeExcelSingleYear  // Excel с одним годом  
-    FileTypePDFSummary       // PDF сводный отчет
-    FileTypePDFDueDiligence // PDF отчет о должной осмотрительности
-)
+type IncomeData struct {
+    Revenue    sql.NullFloat64
+    NetProfit  sql.NullFloat64
+}
 
 func main() {
-    if len(os.Args) < 2 {
-        log.Fatal("Укажите путь к файлу: go run main.go <путь_к_файлу>")
-    }
-
-    filePath := os.Args[1]
-    
-    // Проверяем существование файла
-    if !fileExists(filePath) {
-        log.Fatalf("Файл не существует: %s", filePath)
-    }
-
-    // Определяем тип файла
-    fileType, err := detectFileType(filePath)
+    var err error
+    db, err = connectToDB()
     if err != nil {
-        log.Fatal("Ошибка определения типа файла:", err)
-    }
-
-    fmt.Printf("Тип файла: %v\n", fileType)
-
-    // Чтение данных из файла
-    financialData, err := readFinancialFile(filePath, fileType)
-    if err != nil {
-        log.Fatal("Ошибка чтения файла:", err)
-    }
-
-    // Подключение к базе данных
-    db, err := connectToDB()
-    if err != nil {
-        log.Fatal("Ошибка подключения к БД:", err)
+        log.Fatal("Не удалось подключиться к БД:", err)
     }
     defer db.Close()
 
-    // Вставка данных в таблицу
-    insertedCount, err := insertFinancialData(db, financialData)
-    if err != nil {
-        log.Fatal("Ошибка вставки данных:", err)
-    }
+    // Проверяем соединение периодически
+    go checkDBConnection()
 
-    fmt.Printf("Успешно добавлено %d записей в базу данных\n", insertedCount)
+    runServer()
+}
+
+func checkDBConnection() {
+    ticker := time.NewTicker(5 * time.Minute)
+    defer ticker.Stop()
+    
+    for range ticker.C {
+        if err := db.Ping(); err != nil {
+            log.Printf("Потеряно соединение с БД: %v", err)
+            // Попытка переподключения
+            if newDB, err := connectToDB(); err == nil {
+                db.Close()
+                db = newDB
+                log.Println("Соединение с БД восстановлено")
+            }
+        }
+    }
 }
 
 // fileExists проверяет существование файла
@@ -103,110 +85,13 @@ func fileExists(filePath string) bool {
     return err == nil
 }
 
-// detectFileType определяет тип файла по расширению и содержанию
-func detectFileType(filePath string) (FileType, error) {
-    if !fileExists(filePath) {
-        return FileTypeUnknown, fmt.Errorf("файл не существует: %s", filePath)
-    }
-
-    ext := strings.ToLower(filepath.Ext(filePath))
-    
-    switch ext {
-    case ".xlsx", ".xls":
-        return detectExcelFileType(filePath)
-    case ".pdf":
-        return detectPDFFileType(filePath)
-    default:
-        return FileTypeUnknown, fmt.Errorf("неподдерживаемый формат файла: %s", ext)
-    }
-}
-
-// detectExcelFileType определяет тип Excel файла
-func detectExcelFileType(filePath string) (FileType, error) {
-    if !fileExists(filePath) {
-        return FileTypeUnknown, fmt.Errorf("файл не существует: %s", filePath)
-    }
-
-    f, err := excelize.OpenFile(filePath)
-    if err != nil {
-        return FileTypeUnknown, err
-    }
-    defer f.Close()
-
-    // Пробуем прочитать баланс
-    rows, err := f.GetRows("Бухгалтерский баланс")
-    if err != nil {
-        return FileTypeUnknown, err
-    }
-
-    if len(rows) == 0 {
-        return FileTypeUnknown, fmt.Errorf("файл не содержит данных")
-    }
-
-    // Анализируем заголовки
-    headerRow := rows[0]
-    yearCount := 0
-    
-    for _, cell := range headerRow {
-        if isYear(cell) {
-            yearCount++
-        }
-    }
-
-    if yearCount > 1 {
-        return FileTypeExcelMultiYear, nil
-    } else if yearCount == 1 {
-        return FileTypeExcelSingleYear, nil
-    }
-
-    // Если годы не найдены в заголовках, проверяем наличие данных
-    if len(rows) > 1 && len(rows[1]) > 2 {
-        return FileTypeExcelSingleYear, nil
-    }
-
-    return FileTypeUnknown, fmt.Errorf("не удалось определить формат Excel файла")
-}
-
-// detectPDFFileType определяет тип PDF файла
-func detectPDFFileType(filePath string) (FileType, error) {
-    if !fileExists(filePath) {
-        return FileTypeUnknown, fmt.Errorf("файл не существует: %s", filePath)
-    }
-
-    filename := strings.ToLower(filepath.Base(filePath))
-    
-    if strings.Contains(filename, "сводный") || strings.Contains(filename, "сводный отчет") {
-        return FileTypePDFSummary, nil
-    } else if strings.Contains(filename, "должной") || strings.Contains(filename, "осмотрительности") {
-        return FileTypePDFDueDiligence, nil
-    }
-    
-    return FileTypePDFSummary, nil
-}
-
-// readFinancialFile читает финансовые данные в зависимости от типа файла
-func readFinancialFile(filePath string, fileType FileType) ([]FinancialData, error) {
-    if !fileExists(filePath) {
-        return nil, fmt.Errorf("файл не существует: %s", filePath)
-    }
-
-    switch fileType {
-    case FileTypeExcelMultiYear, FileTypeExcelSingleYear:
-        return readExcelFile(filePath, fileType)
-    case FileTypePDFSummary, FileTypePDFDueDiligence:
-        return readPDFFile(filePath, fileType)
-    default:
-        return nil, fmt.Errorf("неподдерживаемый тип файла: %v", fileType)
-    }
-}
-
 // readExcelFile читает данные из Excel файла
-func readExcelFile(filePath string, fileType FileType) ([]FinancialData, error) {
+func readExcelFile(filePath string, originalFilename string, fileType FileType) ([]FinancialData, error) {
     if !fileExists(filePath) {
         return nil, fmt.Errorf("файл не существует: %s", filePath)
     }
 
-    inn, ogrn, companyName := extractCompanyInfoFromFilename(filePath)
+    inn, ogrn, companyName := extractCompanyInfoFromFilename(filePath, originalFilename)
     
     f, err := excelize.OpenFile(filePath)
     if err != nil {
@@ -241,8 +126,16 @@ func readExcelFile(filePath string, fileType FileType) ([]FinancialData, error) 
             INN:      inn,
             OGRN:     ogrn,
             Name:     companyName,
-            FullName: fmt.Sprintf("%s (ИНН: %s, ОГРН: %s)", companyName, inn, ogrn),
+            FullName: companyName,
             Year:     year,
+            Date:     time.Now(),
+            CreatedAt: time.Now(),
+            UpdatedAt: time.Now(),
+        }
+
+        // Добавляем реквизиты в FullName только если они есть
+        if inn != "" || ogrn != "" {
+            data.FullName = fmt.Sprintf("%s (ИНН: %s, ОГРН: %s)", companyName, inn, ogrn)
         }
 
         // Добавляем данные из баланса
@@ -264,97 +157,257 @@ func readExcelFile(filePath string, fileType FileType) ([]FinancialData, error) 
             data.NetProfit = income.NetProfit
         }
 
+        // Заполняем обязательные поля
+        fillRequiredFields(&data)
+        
         allData = append(allData, data)
         
-        fmt.Printf("Прочитаны данные за %s год: Выручка=%v, Прибыль=%v\n", 
-            year, data.Revenue, data.NetProfit)
+        fmt.Printf("Прочитаны данные за %s год: Выручка=%v, Прибыль=%v, Активы=%v\n", 
+            year, data.Revenue, data.NetProfit, data.TotalAssets)
     }
 
-    return allData, nil
-}
-
-// readPDFFile читает данные из PDF файла
-func readPDFFile(filePath string, fileType FileType) ([]FinancialData, error) {
-    if !fileExists(filePath) {
-        return nil, fmt.Errorf("файл не существует: %s", filePath)
-    }
-
-    inn, ogrn, companyName := extractCompanyInfoFromFilename(filePath)
-    
-    var allData []FinancialData
-    
-    // Для PDF создаем одну запись с текущим годом
-    currentYear := fmt.Sprintf("%d", time.Now().Year())
-    
-    data := FinancialData{
-        INN:      inn,
-        OGRN:     ogrn,
-        Name:     companyName,
-        FullName: fmt.Sprintf("%s (ИНН: %s, ОГРН: %s)", companyName, inn, ogrn),
-        Year:     currentYear,
-        // Для PDF файлов финансовые данные обычно не доступны в структурированном виде
-        Revenue:    sql.NullFloat64{Valid: false},
-        NetProfit: sql.NullFloat64{Valid: false},
-    }
-    
-    // Дополнительные поля, которые могут быть в PDF
-    if fileType == FileTypePDFSummary {
-        // Здесь можно добавить парсинг конкретных полей из PDF
-        data.LegalAddress = "301602, Тульская область, Узловский район, город Узловая, Дубовская ул., д. 2а"
-        data.StaffCount = sql.NullInt64{Int64: 2489, Valid: true}
-        data.MainOKVED = "25.99.21"
-        data.OKVEDDescription = "Производство бронированных или армированных сейфов, несгораемых шкафов и дверей"
-        data.RegistrationDate = "2015-08-18"
-    }
-    
-    allData = append(allData, data)
-    fmt.Printf("Создана запись из PDF для %s за %s год (ОГРН: %s)\n", companyName, currentYear, ogrn)
-    
     return allData, nil
 }
 
 // extractCompanyInfoFromFilename извлекает информацию о компании из имени файла
-func extractCompanyInfoFromFilename(filename string) (string, string, string) {
+func extractCompanyInfoFromFilename(filename string, originalFilename string) (string, string, string) {
     baseName := filepath.Base(filename)
+    baseName = strings.TrimSuffix(originalFilename, filepath.Ext(originalFilename))
     
-    // Для файла типа "1155003003121-2024-2023-..." - ОГРН из начала
-    if strings.Contains(baseName, "-202") {
+    fmt.Printf("Анализ имени файла: %s\n", baseName)
+    
+    // Паттерн 1: ОГРН-годы
+    if strings.Contains(baseName, "-202") || strings.Contains(baseName, "-20") {
         parts := strings.Split(baseName, "-")
         if len(parts) > 0 {
             ogrn := strings.TrimSpace(parts[0])
-            // Генерируем временный ИНН, так как его нет в названии файла
-            inn := "unknown_inn"
-            if len(ogrn) >= 10 {
-                // Для демонстрации - берем последние 10 цифр ОГРН как ИНН
-                inn = ogrn[len(ogrn)-10:]
+            if isNumeric(ogrn) && (len(ogrn) == 13 || len(ogrn) == 10 || len(ogrn) == 12) {
+                inn := ""
+                if len(ogrn) >= 10 {
+                    inn = ogrn[len(ogrn)-10:]
+                }
+                companyName := fmt.Sprintf("Организация %s", ogrn)
+                return inn, ogrn, companyName
             }
-            return inn, ogrn, fmt.Sprintf("Организация %s", ogrn)
         }
     }
     
-    // Для файла типа "Бухгалтерская отчетность - ООО НПО ПРОМЕТ.xlsx"
-    if strings.Contains(baseName, "Бухгалтерская отчетность - ") {
-        start := strings.Index(baseName, "Бухгалтерская отчетность - ")
-        if start != -1 {
-            namePart := baseName[start+len("Бухгалтерская отчетность - "):]
-            namePart = strings.TrimSuffix(namePart, ".xlsx")
-            return "unknown_inn", "unknown_ogrn", strings.TrimSpace(namePart)
+    var companyName string
+    
+    // Паттерн 2: Убираем "Бухгалтерская отчетность" и берем остальное как название
+    prefixes := []string{
+        "Бухгалтерская отчетность - ",
+        "бухгалтерская отчетность - ",
+        "Финансовая отчетность - ",
+        "Бухгалтерская отчетность ",
+        "бухгалтерская отчетность ",
+        "Финансовая отчетность ",
+    }
+    
+    for _, prefix := range prefixes {
+        if strings.HasPrefix(baseName, prefix) {
+            companyName = baseName[len(prefix):]
+            companyName = removeTechnicalInfoFromEnd(companyName)
+            break
         }
     }
     
-    // Для PDF файлов с ООО НПО ПРОМЕТ
-    if strings.Contains(baseName, "ООО НПО ПРОМЕТ") || strings.Contains(baseName, "ООО \"НПО Промет\"") {
-        // Данные из предоставленного PDF
-        return "7751009218", "1155003003121", "ООО НПО Промет"
+    if companyName == "" {
+        for _, prefix := range prefixes {
+            if idx := strings.Index(baseName, prefix); idx != -1 {
+                companyName = baseName[idx+len(prefix):]
+                companyName = removeTechnicalInfoFromEnd(companyName)
+                break
+            }
+        }
     }
     
-    return "unknown_inn", "unknown_ogrn", "Неизвестная организация"
+    // Паттерн 3: Если не нашли через префиксы, используем все имя файла
+    if companyName == "" {
+        companyName = removeTechnicalInfoFromEnd(baseName)
+    }
+    
+    // Паттерн 4: Извлечение ИНН и ОГРН из имени файла
+    inn, ogrn := extractINNAndOGRN(baseName)
+    if inn != "" || ogrn != "" {
+        if companyName == "" {
+            companyName = fmt.Sprintf("Организация %s", ogrn)
+            if ogrn == "" && inn != "" {
+                companyName = fmt.Sprintf("Организация %s", inn)
+            }
+        }
+        return inn, ogrn, strings.TrimSpace(companyName)
+    }
+    
+    // Паттерн 5: Поиск в базе данных
+    companyName = strings.TrimSpace(companyName)
+    if companyName != "" {
+        dbInn, dbOgrn := findCompanyInDatabase(companyName)
+        if dbInn != "" || dbOgrn != "" {
+            fmt.Printf("Найдены реквизиты в БД для '%s': ИНН=%s, ОГРН=%s\n", companyName, dbInn, dbOgrn)
+            return dbInn, dbOgrn, companyName
+        }
+    }
+    
+    // Паттерн 6: Если ничего не нашли
+    if companyName == "" {
+        companyName = "Неизвестная организация"
+    } else if len(companyName) > 50 {
+        companyName = companyName[:50] + "..."
+    }
+    
+    fmt.Printf("Используем название: %s\n", companyName)
+    return "", "", companyName
 }
 
-// Остальные функции остаются без изменений...
-// [detectYearsFromExcel, isYear, extractYearFromSingleFormat, readBalanceSheet, readIncomeStatement, 
-//  parseNumericValue, connectToDB, insertFinancialData, createPeriodFromYear, determineCompanySize]
+// findCompanyInDatabase ищет компанию в базе данных по названию
+func findCompanyInDatabase(companyName string) (string, string) {
+    if db == nil {
+        fmt.Println("База данных не подключена")
+        return "", ""
+    }
+    
+    cleanName := strings.TrimSpace(companyName)
+    
+    queries := []string{
+        "SELECT inn, ogrn FROM organisation WHERE name = $1 OR full_name = $1 LIMIT 1",
+        "SELECT inn, ogrn FROM organisation WHERE name ILIKE $1 OR full_name ILIKE $1 LIMIT 1",
+        "SELECT inn, ogrn FROM organisation WHERE name ILIKE $1 || '%' OR full_name ILIKE $1 || '%' LIMIT 1",
+    }
+    
+    searchPatterns := []string{
+        cleanName,
+        "%" + cleanName + "%",
+        cleanName,
+    }
+    
+    for i, query := range queries {
+        var inn, ogrn sql.NullString
+        err := db.QueryRow(query, searchPatterns[i]).Scan(&inn, &ogrn)
+        
+        if err == nil {
+            if inn.Valid || ogrn.Valid {
+                innStr := ""
+                ogrnStr := ""
+                if inn.Valid {
+                    innStr = inn.String
+                }
+                if ogrn.Valid {
+                    ogrnStr = ogrn.String
+                }
+                return innStr, ogrnStr
+            }
+        } else if err != sql.ErrNoRows {
+            fmt.Printf("Ошибка при поиске в БД: %v\n", err)
+        }
+    }
+    
+    // Дополнительный поиск для ООО
+    if strings.HasPrefix(cleanName, "ООО ") {
+        for i, query := range queries {
+            var inn, ogrn sql.NullString
+            err := db.QueryRow(query, searchPatterns[i]).Scan(&inn, &ogrn)
+            
+            if err == nil {
+                if inn.Valid || ogrn.Valid {
+                    innStr := ""
+                    ogrnStr := ""
+                    if inn.Valid {
+                        innStr = inn.String
+                    }
+                    if ogrn.Valid {
+                        ogrnStr = ogrn.String
+                    }
+                    return innStr, ogrnStr
+                }
+            }
+        }
+    }
+    
+    return "", ""
+}
 
+// extractINNAndOGRN пытается найти ИНН и ОГРН в строке
+func extractINNAndOGRN(text string) (string, string) {
+    inn := ""
+    ogrn := ""
+    
+    words := strings.Fields(text)
+    for _, word := range words {
+        cleanWord := strings.Trim(word, " ,.-_()")
+        if isNumeric(cleanWord) {
+            switch len(cleanWord) {
+            case 10: // ИНН юридического лица
+                inn = cleanWord
+            case 12: // ИНН физического лица
+                inn = cleanWord
+            case 13: // ОГРН
+                ogrn = cleanWord
+            }
+        }
+    }
+    
+    return inn, ogrn
+}
+
+// removeTechnicalInfoFromEnd удаляет техническую информацию только с конца названия
+func removeTechnicalInfoFromEnd(name string) string {
+    originalName := name
+    
+    // Удаляем расширения файлов
+    name = strings.TrimSuffix(name, ".xlsx")
+    name = strings.TrimSuffix(name, ".xls")
+    name = strings.TrimSuffix(name, ".pdf")
+    name = strings.TrimSuffix(name, ".PDF")
+    
+    // Удаляем годы в конце
+    re := regexp.MustCompile(`[\s\-_]*((19|20)\d{2})[\s\-_]*$`)
+    name = re.ReplaceAllString(name, "")
+    
+    // Удаляем технические суффиксы
+    technicalSuffixes := []string{
+        "отчетность", "отчет", "баланс", 
+        "финансовый", "бухгалтерский",
+        "за год", "год", "г.", 
+        "копия", "сканирование", "scan",
+        "final", "draft", "ver", "version",
+    }
+    
+    for _, suffix := range technicalSuffixes {
+        patterns := []string{
+            " " + suffix + "$",
+            " - " + suffix + "$", 
+            "_" + suffix + "$",
+            "-" + suffix + "$",
+        }
+        for _, pattern := range patterns {
+            name = strings.TrimSuffix(name, pattern)
+        }
+    }
+    
+    name = strings.Trim(name, " -_")
+    
+    if name == "" {
+        return originalName
+    }
+    
+    return strings.TrimSpace(name)
+}
+
+// isNumeric проверяет, состоит ли строка только из цифр
+func isNumeric(s string) bool {
+    if s == "" {
+        return false
+    }
+    for _, char := range s {
+        if char < '0' || char > '9' {
+            return false
+        }
+    }
+    return true
+}
+
+// detectYearsFromExcel определяет годы из Excel файла
 func detectYearsFromExcel(f *excelize.File, fileType FileType) ([]string, error) {
     rows, err := f.GetRows("Бухгалтерский баланс")
     if err != nil {
@@ -412,23 +465,7 @@ func extractYearFromSingleFormat(rows [][]string) string {
     return ""
 }
 
-type BalanceData struct {
-    TotalAssets          sql.NullFloat64
-    Equity               sql.NullFloat64
-    FixedAssets          sql.NullFloat64
-    CurrentAssets        sql.NullFloat64
-    LongTermLiabilities  sql.NullFloat64
-    ShortTermLiabilities sql.NullFloat64
-    Cash                 sql.NullFloat64
-    AccountsReceivable   sql.NullFloat64
-    Inventory            sql.NullFloat64
-}
-
-type IncomeData struct {
-    Revenue    sql.NullFloat64
-    NetProfit  sql.NullFloat64
-}
-
+// readBalanceSheet читает данные из баланса
 func readBalanceSheet(f *excelize.File, years []string) (map[string]BalanceData, error) {
     rows, err := f.GetRows("Бухгалтерский баланс")
     if err != nil {
@@ -438,7 +475,7 @@ func readBalanceSheet(f *excelize.File, years []string) (map[string]BalanceData,
     balanceMap := make(map[string]map[string]string)
     
     for _, row := range rows {
-        if len(row) < 2 {
+        if len(row) < 3 {
             continue
         }
         
@@ -449,14 +486,10 @@ func readBalanceSheet(f *excelize.File, years []string) (map[string]BalanceData,
         
         balanceMap[code] = make(map[string]string)
         
-        if len(years) > 1 {
-            for i := 2; i < len(row) && i-2 < len(years); i++ {
-                year := years[i-2]
-                balanceMap[code][year] = strings.TrimSpace(row[i])
-            }
-        } else {
-            if len(row) > 2 {
-                balanceMap[code][years[0]] = strings.TrimSpace(row[2])
+        // Для формата с одним годом данные в колонке C (индекс 2)
+        for i, year := range years {
+            if i == 0 && len(row) > 2 {
+                balanceMap[code][year] = strings.TrimSpace(row[2])
             }
         }
     }
@@ -480,6 +513,7 @@ func readBalanceSheet(f *excelize.File, years []string) (map[string]BalanceData,
     return result, nil
 }
 
+// readIncomeStatement читает данные из отчета о прибылях и убытках
 func readIncomeStatement(f *excelize.File, years []string) (map[string]IncomeData, error) {
     rows, err := f.GetRows("Отчет о фин. результатах")
     if err != nil {
@@ -489,7 +523,7 @@ func readIncomeStatement(f *excelize.File, years []string) (map[string]IncomeDat
     incomeMap := make(map[string]map[string]string)
     
     for _, row := range rows {
-        if len(row) < 2 {
+        if len(row) < 3 {
             continue
         }
         
@@ -500,14 +534,10 @@ func readIncomeStatement(f *excelize.File, years []string) (map[string]IncomeDat
         
         incomeMap[code] = make(map[string]string)
         
-        if len(years) > 1 {
-            for i := 2; i < len(row) && i-2 < len(years); i++ {
-                year := years[i-2]
-                incomeMap[code][year] = strings.TrimSpace(row[i])
-            }
-        } else {
-            if len(row) > 2 {
-                incomeMap[code][years[0]] = strings.TrimSpace(row[2])
+        // Для формата с одним годом данные в колонке C (индекс 2)
+        for i, year := range years {
+            if i == 0 && len(row) > 2 {
+                incomeMap[code][year] = strings.TrimSpace(row[2])
             }
         }
     }
@@ -524,6 +554,7 @@ func readIncomeStatement(f *excelize.File, years []string) (map[string]IncomeDat
     return result, nil
 }
 
+// parseNumericValue парсит числовые значения
 func parseNumericValue(value string) sql.NullFloat64 {
     if value == "" || value == "-" {
         return sql.NullFloat64{Valid: false}
@@ -543,88 +574,4 @@ func parseNumericValue(value string) sql.NullFloat64 {
     }
     
     return sql.NullFloat64{Float64: floatVal, Valid: true}
-}
-
-func connectToDB() (*sql.DB, error) {
-    connStr := "host=192.168.1.137 port=5433 user=myuser password=mypassword dbname=mydatabase sslmode=disable"
-    db, err := sql.Open("postgres", connStr)
-    if err != nil {
-        return nil, err
-    }
-    
-    err = db.Ping()
-    if err != nil {
-        return nil, err
-    }
-    
-    return db, nil
-}
-
-func insertFinancialData(db *sql.DB, data []FinancialData) (int, error) {
-    inserted := 0
-
-    for _, record := range data {
-        query := `
-        INSERT INTO indecaters (
-            inn, ogrn, name, full_name, revenue, net_profit,
-            company_size_category, start_period, finish_period, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-        `
-
-        companySize := determineCompanySize(record.Revenue)
-        startPeriod, finishPeriod := createPeriodFromYear(record.Year)
-
-        _, err := db.Exec(query,
-            record.INN,
-            record.OGRN,
-            record.Name,
-            record.FullName,
-            record.Revenue,
-            record.NetProfit,
-            companySize,
-            startPeriod,
-            finishPeriod,
-            time.Now(),
-            time.Now(),
-        )
-
-        if err != nil {
-            if strings.Contains(err.Error(), "duplicate key") {
-                fmt.Printf("Запись с ИНН %s (ОГРН %s) за %s год уже существует\n", record.INN, record.OGRN, record.Year)
-                continue
-            }
-            return inserted, err
-        }
-
-        inserted++
-        fmt.Printf("Добавлена запись для ИНН %s (ОГРН %s) за %s год\n", record.INN, record.OGRN, record.Year)
-    }
-
-    return inserted, nil
-}
-
-func createPeriodFromYear(year string) (time.Time, time.Time) {
-    yearInt, _ := strconv.Atoi(year)
-    startPeriod := time.Date(yearInt, 1, 1, 0, 0, 0, 0, time.UTC)
-    finishPeriod := time.Date(yearInt, 12, 31, 23, 59, 59, 0, time.UTC)
-    return startPeriod, finishPeriod
-}
-
-func determineCompanySize(revenue sql.NullFloat64) string {
-    if !revenue.Valid {
-        return "Неизвестно"
-    }
-    
-    switch {
-    case revenue.Float64 >= 2000000:
-        return "Крупная"
-    case revenue.Float64 >= 800000:
-        return "Средняя"
-    case revenue.Float64 >= 120000:
-        return "Малая"
-    case revenue.Float64 >= 12000:
-        return "Микропредприятие"
-    default:
-        return "Микропредприятие"
-    }
 }

@@ -1,0 +1,8 @@
+[
+   {"name":"filter1",
+    "query":"kuhfksdjfhksdjhfkjsdhfkjhsdf",
+ "uri":"/static/filters/prom1.json"}, 
+   {"name":"filter2",
+    "query":"kuhfksdjfhksdjhfkjsdhfkjhsdf",
+ "uri":"/static/filters/prom2.json"}
+]

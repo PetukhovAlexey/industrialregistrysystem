@@ -1,12 +1,78 @@
-CREATE TABLE "indecaters" (
+-- --------------------------------------------------------
+-- Хост:                         192.168.1.137
+-- Версия сервера:               PostgreSQL 15.14 (Debian 15.14-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+-- Операционная система:         
+-- HeidiSQL Версия:              12.12.0.7122
+-- --------------------------------------------------------
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET NAMES  */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+-- Дамп структуры для таблица public.documents
+CREATE TABLE IF NOT EXISTS "documents" (
 	"id" SERIAL NOT NULL,
-	"inn" VARCHAR(20) NOT NULL,
-	"ogrn" VARCHAR(20) NOT NULL,
-	"name" VARCHAR(500) NOT NULL,
+	"file_path" TEXT NOT NULL,
+	"file_name" TEXT NOT NULL,
+	"file_extension" VARCHAR(50) NULL DEFAULT NULL,
+	"original_file_name" TEXT NULL DEFAULT NULL,
+	"file_size" BIGINT NULL DEFAULT NULL,
+	"created_at" TIMESTAMPTZ NULL DEFAULT CURRENT_TIMESTAMP,
+	"organisation" INTEGER NULL DEFAULT NULL,
+	"document_type_id" INTEGER NULL DEFAULT NULL,
+	PRIMARY KEY ("id"),
+	CONSTRAINT "documents_document_type_id_fkey" FOREIGN KEY ("document_type_id") REFERENCES "document_types" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION,
+	CONSTRAINT "organisation" FOREIGN KEY ("organisation") REFERENCES "organisation" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION
+);
+
+-- Экспортируемые данные не выделены.
+
+-- Дамп структуры для таблица public.documentstypes
+CREATE TABLE IF NOT EXISTS "documentstypes" (
+	"Столбец 1" INTEGER NULL DEFAULT NULL
+);
+
+-- Экспортируемые данные не выделены.
+
+-- Дамп структуры для таблица public.document_types
+CREATE TABLE IF NOT EXISTS "document_types" (
+	"id" SERIAL NOT NULL,
+	"type_name" VARCHAR(100) NOT NULL,
+	"description" TEXT NULL DEFAULT NULL,
+	"cash_w" NUMERIC(5,3) NULL DEFAULT 1.0,
+	"long_term_liabilities_w" NUMERIC(5,3) NULL DEFAULT 1.0,
+	"short_term_liabilities_w" NUMERIC(5,3) NULL DEFAULT 1.0,
+	"revenue_w" NUMERIC(5,3) NULL DEFAULT 1.0,
+	"net_profit_w" NUMERIC(5,3) NULL DEFAULT 1.0,
+	"total_assets_w" NUMERIC(5,3) NULL DEFAULT 1.0,
+	"equity_w" NUMERIC(5,3) NULL DEFAULT 1.0,
+	"fixed_assets_w" NUMERIC(5,3) NULL DEFAULT 1.0,
+	"current_assets_w" NUMERIC(5,3) NULL DEFAULT 1.0,
+	"accounts_receivable_w" NUMERIC(5,3) NULL DEFAULT 1.0,
+	"inventory_w" NUMERIC(5,3) NULL DEFAULT 1.0,
+	"total_taxes_w" NUMERIC(5,3) NULL DEFAULT 1.0,
+	"total_staff_w" NUMERIC(5,3) NULL DEFAULT 1.0,
+	"export_volume_w" NUMERIC(5,3) NULL DEFAULT 1.0,
+	"created_at" TIMESTAMPTZ NULL DEFAULT CURRENT_TIMESTAMP,
+	"updated_at" TIMESTAMPTZ NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY ("id"),
+	UNIQUE ("type_name")
+);
+
+-- Экспортируемые данные не выделены.
+
+-- Дамп структуры для таблица public.indecaters
+CREATE TABLE IF NOT EXISTS "indecaters" (
+	"id" SERIAL NOT NULL,
+	"document" INTEGER NULL DEFAULT NULL,
+	"inn" VARCHAR(20) NULL DEFAULT NULL,
+	"ogrn" VARCHAR(20) NULL DEFAULT NULL,
+	"name" VARCHAR(500) NULL DEFAULT NULL,
 	"full_name" TEXT NULL DEFAULT NULL,
-	"spark_status" VARCHAR(255) NULL DEFAULT NULL::character varying,
-	"internal_status" VARCHAR(255) NULL DEFAULT NULL::character varying,
-	"final_status" VARCHAR(255) NULL DEFAULT NULL::character varying,
 	"registration_date" DATE NULL DEFAULT NULL,
 	"added_to_registry_date" DATE NULL DEFAULT NULL,
 	"legal_address" TEXT NULL DEFAULT NULL,
@@ -108,7 +174,130 @@ CREATE TABLE "indecaters" (
 	"cash" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
 	"accounts_receivable" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
 	"inventory" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
-	PRIMARY KEY ("id")
-)
-;
+	"document_type" INTEGER NULL DEFAULT NULL,
+	PRIMARY KEY ("id"),
+	CONSTRAINT "to_doc_type_link" FOREIGN KEY ("document_type") REFERENCES "document_types" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION,
+	CONSTRAINT "to_document_link" FOREIGN KEY ("document") REFERENCES "documents" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION
+);
 
+-- Экспортируемые данные не выделены.
+
+-- Дамп структуры для таблица public.organisation
+CREATE TABLE IF NOT EXISTS "organisation" (
+	"id" SERIAL NOT NULL,
+	"inn" VARCHAR(20) NULL DEFAULT NULL,
+	"ogrn" VARCHAR(20) NULL DEFAULT NULL,
+	"name" VARCHAR(500) NULL DEFAULT NULL,
+	"full_name" TEXT NULL DEFAULT NULL,
+	"spark_status" VARCHAR(255) NULL DEFAULT NULL::character varying,
+	"internal_status" VARCHAR(255) NULL DEFAULT NULL::character varying,
+	"final_status" VARCHAR(255) NULL DEFAULT NULL::character varying,
+	"registration_date" DATE NULL DEFAULT NULL,
+	"added_to_registry_date" DATE NULL DEFAULT NULL,
+	"legal_address" TEXT NULL DEFAULT NULL,
+	"production_address" TEXT NULL DEFAULT NULL,
+	"additional_site_address" TEXT NULL DEFAULT NULL,
+	"main_industry" VARCHAR(500) NULL DEFAULT NULL::character varying,
+	"main_subindustry" VARCHAR(500) NULL DEFAULT NULL::character varying,
+	"additional_industry" VARCHAR(500) NULL DEFAULT NULL::character varying,
+	"additional_subindustry" VARCHAR(500) NULL DEFAULT NULL::character varying,
+	"industry_presentations" TEXT NULL DEFAULT NULL,
+	"main_okved_code" VARCHAR(20) NULL DEFAULT NULL::character varying,
+	"main_okved_activity" TEXT NULL DEFAULT NULL,
+	"production_okved_code" VARCHAR(20) NULL DEFAULT NULL::character varying,
+	"production_okved_activity" TEXT NULL DEFAULT NULL,
+	"company_info" TEXT NULL DEFAULT NULL,
+	"company_size_category" VARCHAR(100) NULL DEFAULT NULL::character varying,
+	"company_size_by_staff" VARCHAR(100) NULL DEFAULT NULL::character varying,
+	"company_size_by_revenue" VARCHAR(100) NULL DEFAULT NULL::character varying,
+	"leader_name" VARCHAR(500) NULL DEFAULT NULL::character varying,
+	"head_organization" VARCHAR(500) NULL DEFAULT NULL::character varying,
+	"head_organization_inn" VARCHAR(20) NULL DEFAULT NULL::character varying,
+	"head_organization_relation_type" VARCHAR(255) NULL DEFAULT NULL::character varying,
+	"leader_contacts" TEXT NULL DEFAULT NULL,
+	"leader_email" VARCHAR(255) NULL DEFAULT NULL::character varying,
+	"employee_contact" TEXT NULL DEFAULT NULL,
+	"phone_number" VARCHAR(100) NULL DEFAULT NULL::character varying,
+	"emergency_contact" TEXT NULL DEFAULT NULL,
+	"website" VARCHAR(255) NULL DEFAULT NULL::character varying,
+	"general_email" VARCHAR(255) NULL DEFAULT NULL::character varying,
+	"support_measures_info" TEXT NULL DEFAULT NULL,
+	"has_special_status" BOOLEAN NULL DEFAULT NULL,
+	"summary_site" VARCHAR(255) NULL DEFAULT NULL::character varying,
+	"got_moscow_support" BOOLEAN NULL DEFAULT NULL,
+	"is_systemically_important" BOOLEAN NULL DEFAULT NULL,
+	"msp_status" VARCHAR(255) NULL DEFAULT NULL::character varying,
+	"is_the_one" BOOLEAN NULL DEFAULT NULL,
+	"has_state_order" BOOLEAN NULL DEFAULT NULL,
+	"production_capacity_utilization" NUMERIC(5,2) NULL DEFAULT NULL::numeric,
+	"has_export_supplies" BOOLEAN NULL DEFAULT NULL,
+	"export_volume_previous_year" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"export_countries_list" TEXT NULL DEFAULT NULL,
+	"tn_ved_code" VARCHAR(50) NULL DEFAULT NULL::character varying,
+	"industry_by_spark_and_ref" VARCHAR(500) NULL DEFAULT NULL::character varying,
+	"district" VARCHAR(255) NULL DEFAULT NULL::character varying,
+	"area" VARCHAR(255) NULL DEFAULT NULL::character varying,
+	"revenue" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"net_profit" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"total_staff" INTEGER NULL DEFAULT NULL,
+	"moscow_staff" INTEGER NULL DEFAULT NULL,
+	"total_payroll" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"moscow_payroll" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"avg_salary_total" NUMERIC(10,2) NULL DEFAULT NULL::numeric,
+	"avg_salary_moscow" NUMERIC(10,2) NULL DEFAULT NULL::numeric,
+	"total_taxes" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"profit_tax" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"property_tax" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"land_tax" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"personal_income_tax" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"transport_tax" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"other_taxes" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"excise_tax" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"investments_moscow" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"export_volume" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"land_cadastral_number" VARCHAR(100) NULL DEFAULT NULL::character varying,
+	"land_area" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"land_permitted_use" VARCHAR(500) NULL DEFAULT NULL::character varying,
+	"land_ownership_type" VARCHAR(255) NULL DEFAULT NULL::character varying,
+	"land_owner" VARCHAR(500) NULL DEFAULT NULL::character varying,
+	"building_cadastral_number" VARCHAR(100) NULL DEFAULT NULL::character varying,
+	"building_area" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"building_permitted_use" VARCHAR(500) NULL DEFAULT NULL::character varying,
+	"building_type_and_purpose" VARCHAR(500) NULL DEFAULT NULL::character varying,
+	"building_ownership_type" VARCHAR(255) NULL DEFAULT NULL::character varying,
+	"building_owner" VARCHAR(500) NULL DEFAULT NULL::character varying,
+	"production_area" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"product_name" TEXT NULL DEFAULT NULL,
+	"standardized_product_name" VARCHAR(500) NULL DEFAULT NULL::character varying,
+	"produced_products_list" TEXT NULL DEFAULT NULL,
+	"products_by_type_and_segment" TEXT NULL DEFAULT NULL,
+	"product_catalog" TEXT NULL DEFAULT NULL,
+	"legal_address_latitude" NUMERIC(10,8) NULL DEFAULT NULL::numeric,
+	"legal_address_longitude" NUMERIC(11,8) NULL DEFAULT NULL::numeric,
+	"production_address_latitude" NUMERIC(10,8) NULL DEFAULT NULL::numeric,
+	"production_address_longitude" NUMERIC(11,8) NULL DEFAULT NULL::numeric,
+	"additional_site_latitude" NUMERIC(10,8) NULL DEFAULT NULL::numeric,
+	"additional_site_longitude" NUMERIC(11,8) NULL DEFAULT NULL::numeric,
+	"revision" BIGINT NULL DEFAULT 0,
+	"destroyed" BOOLEAN NULL DEFAULT false,
+	"created_at" TIMESTAMPTZ NULL DEFAULT CURRENT_TIMESTAMP,
+	"updated_at" TIMESTAMPTZ NULL DEFAULT CURRENT_TIMESTAMP,
+	"total_assets" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"equity" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"fixed_assets" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"current_assets" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"long_term_liabilities" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"short_term_liabilities" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"cash" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"accounts_receivable" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	"inventory" NUMERIC(15,2) NULL DEFAULT NULL::numeric,
+	PRIMARY KEY ("id")
+);
+
+-- Экспортируемые данные не выделены.
+
+/*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
+/*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;
+/*!40014 SET FOREIGN_KEY_CHECKS=IFNULL(@OLD_FOREIGN_KEY_CHECKS, 1) */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40111 SET SQL_NOTES=IFNULL(@OLD_SQL_NOTES, 1) */;
